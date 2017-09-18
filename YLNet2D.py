@@ -66,6 +66,7 @@ class YLNet(nn.Module):
 
     def forward(self,x): #x is an input that needs to go forward
         size_1 = x.size() #256x256x1
+        print 'The input size is ',size_1
         en_1 = self.encoder_1(x) #256x256x64
         en1_maxpool,indices_1 = self.maxpool_1(en_1) #128x128x64
         
