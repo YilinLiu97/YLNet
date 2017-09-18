@@ -47,20 +47,20 @@ class YLNet3D(nn.Module):
 
         
         self.decoder_1 = nn.Sequential(
-            nn.Conv3d(25,50,7,padding=3),#the number of kernels can be easily changed here
-            nn.BatchNorm3d(50),
+            nn.Conv3d(25,25,7,padding=3),#the number of kernels can be easily changed here
+            nn.BatchNorm3d(25),
             nn.PReLU()
             ) # first decoder
 
         self.decoder_2 = nn.Sequential(
-            nn.Conv3d(50,50,7,padding=3),
-            nn.BatchNorm3d(50),
+            nn.Conv3d(50,25,7,padding=3),
+            nn.BatchNorm3d(25),
             nn.PReLU()
             ) # second decoder
 
         self.decoder_3 = nn.Sequential(
-            nn.Conv3d(50,50,7,padding=3),
-            nn.BatchNorm3d(50),
+            nn.Conv3d(50,25,7,padding=3),
+            nn.BatchNorm3d(25),
             nn.PReLU()
             ) # third decoder
 
@@ -76,31 +76,35 @@ class YLNet3D(nn.Module):
         print 'input_size ',size_1
         en_1 = self.encoder_1(x) 
         en1_maxpool,indices_1 = self.maxpool_1(en_1) 
-        
+        print 'en1_maxpool ',en1_maxpool.size()
+        print 'indices_1 ', indices_1.size()
         size_2 = en1_maxpool.size()
         en_2 = self.encoder_2(en1_maxpool) 
         en2_maxpool,indices_2 = self.maxpool_2(en_2)
-
+        print 'en2_maxpool ', en2_maxpool.size()
+        print 'indices_2 ', indices_2.size()
         size_3 = en2_maxpool.size()
         en_3 = self.encoder_3(en2_maxpool) 
         en3_maxpool,indices_3 = self.maxpool_3(en_3)
-        print 'en2_maxpool: ', en2_maxpool.size() #For debugging
-        print 'en3_maxpool: ', en3_maxpool.size()
+        print 'en3_maxpool ', en3_maxpool.size()
+        print 'indices_3 ', indices_3.size()
         de_1 = self.decoder_1(en3_maxpool)
-        print '#output_size ',size_3
-        de1_unpool = self.unpool_1(en3_maxpool, indices_3, output_size=size_3) #transfer of indices
+
+        de1_unpool = self.unpool_1(de_1, indices_3, output_size=size_3) #transfer of indices
         merge1_3 = torch.cat((de1_unpool,en_3), 1)
-        print 'merge1_3 ', merge1_3.size()
+
         de_2 = self.decoder_2(merge1_3)
-        de2_unpool = self.unpool_2(en2_maxpool, indices_2, output_size=size_2) #transfer of indices
+        print 'de_2 ', de_2.size()
+        print 'en2_maxpool ', en2_maxpool.size()
+        de2_unpool = self.unpool_2(de_2, indices_2, output_size=size_2) #transfer of indices
         merge2_2 = torch.cat((de2_unpool,en_2), 1)
-        print 'merge2_2 ', merge2_2.size()
+
         de_3 = self.decoder_3(merge2_2)
-        de3_unpool = self.unpool_3(en1_maxpool, indices_1, output_size=size_1) #transfer of indices
+        de3_unpool = self.unpool_3(de_3, indices_1, output_size=size_1) #transfer of indices
         merge3_1 = torch.cat((de3_unpool,en_1), 1)
-        print 'merge3_1 ', merge3_1.size()
+
         conv_4 = self.conv_4(merge3_1)
-        print 'conv_4 ', conv_4.size()
+
 
         softmax = MySoftmax()
         output = softmax(conv_4)
