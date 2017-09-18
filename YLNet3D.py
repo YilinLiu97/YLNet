@@ -19,19 +19,19 @@ class YLNet3D(nn.Module):
         #Conv3d(in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True)
         #nn.Sequential is a container for Module.Module will work in order during forward
         self.encoder_1 = nn.Sequential(
-            nn.Conv3d(1,25,7,padding=3,dilation=1),
+            nn.Conv3d(1,25,7,padding=6,dilation=2),
             nn.BatchNorm3d(25),
             nn.PReLU()
             ) #first encoder
 
         self.encoder_2 = nn.Sequential(
-            nn.Conv3d(25,25,7,padding=3,dilation=1),
+            nn.Conv3d(25,25,7,padding=6,dilation=2),
             nn.BatchNorm3d(25),
             nn.PReLU()
             ) #second encoder
 
         self.encoder_3 = nn.Sequential(
-            nn.Conv3d(25,25,7,padding=3,dilation=1),
+            nn.Conv3d(25,25,7,padding=6,dilation=2),
             nn.BatchNorm3d(25),
             nn.PReLU()
             ) #third encoder
@@ -84,21 +84,23 @@ class YLNet3D(nn.Module):
         size_3 = en2_maxpool.size()
         en_3 = self.encoder_3(en2_maxpool) 
         en3_maxpool,indices_3 = self.maxpool_3(en_3)
-       
+        print 'en2_maxpool: ', en2_maxpool.size() #For debugging
+        print 'en3_maxpool: ', en3_maxpool.size()
         de_1 = self.decoder_1(en3_maxpool)
+        print '#output_size ',size_3
         de1_unpool = self.unpool_1(en3_maxpool, indices_3, output_size=size_3) #transfer of indices
         merge1_3 = torch.cat((de1_unpool,en_3), 1)
-   
+        print 'merge1_3 ', merge1_3.size()
         de_2 = self.decoder_2(merge1_3)
         de2_unpool = self.unpool_2(en2_maxpool, indices_2, output_size=size_2) #transfer of indices
         merge2_2 = torch.cat((de2_unpool,en_2), 1)
-
+        print 'merge2_2 ', merge2_2.size()
         de_3 = self.decoder_3(merge2_2)
         de3_unpool = self.unpool_3(en1_maxpool, indices_1, output_size=size_1) #transfer of indices
         merge3_1 = torch.cat((de3_unpool,en_1), 1)
-
+        print 'merge3_1 ', merge3_1.size()
         conv_4 = self.conv_4(merge3_1)
-
+        print 'conv_4 ', conv_4.size()
 
         softmax = MySoftmax()
         output = softmax(conv_4)
