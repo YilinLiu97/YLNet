@@ -99,6 +99,7 @@ if __name__ == "__main__":
     input = Variable(torch.randn(1, 1, 256,256))
     net = YLNet()
     output = net(input)
+    print output
 #params = list(net.parameters())
 #print(len(params))
 #print(params[0].size())
