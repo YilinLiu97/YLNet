@@ -1,3 +1,7 @@
+'''
+Modified from LiviaNET/generateROI.py, by josedolz
+'''
+
 import sys
 import pdb
 from os.path import isfile, join
@@ -6,7 +10,7 @@ import numpy as np
 import nibabel as nib
 import scipy.io as sio
 
-# Modified from LiviaNET/generateROIs.py, by josedolz
+
 """ To print function usage """
 def printUsage(error_type):
     if error_type == 1:
