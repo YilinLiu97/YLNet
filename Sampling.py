@@ -2,28 +2,30 @@ import numpy as np
 import random
 import math
 import nibabel as nib
+import os
 
 from scipy.ndimage import generic_filter
 from scipy.stats import entropy
 
 def findCenters(img, patch_size, num_patches):
-   centralVoxelsIndexes_x = np.random.choice(img.get_shape()[0]-patch_size[0]/2, num_patches, replace=True)
-   centralVoxelsIndexes_y = np.random.choice(img.get_shape()[1]-patch_size[1]/2, num_patches, replace=True)
-   centralVoxelsIndexes_z = np.random.choice(img.get_shape()[2]-patch_size[2]/2, num_patches, replace=True)
+
+   centralVoxelsIndexes_x = np.random.choice(img.shape[0]-(patch_size[0]/2), num_patches, replace=True)
+   centralVoxelsIndexes_y = np.random.choice(img.shape[1]-(patch_size[1]/2), num_patches, replace=True)
+   centralVoxelsIndexes_z = np.random.choice(img.shape[2]-(patch_size[2]/2), num_patches, replace=True)
    
    centers = np.transpose([centralVoxelsIndexes_x,centralVoxelsIndexes_y,centralVoxelsIndexes_z])
    return centers
         
 
-def crop_patch(img, centers, patch_size, num_patches):
+def crop_patch(img, centers, patch_size):
     """
     crop 3D patches from an nii file
 
     """
     imgdata = img.get_data()
     patches = []
+    num_patches = centers.shape[0]
     patch_size = np.reshape(np.repeat(patch_size, num_patches),[num_patches,len(patch_size)]) #reshape in order to have the same size as 'centers'
-    count = 0
     for c, len_ in zip(centers, patch_size):
         
       r_x = len_[0]/2
@@ -41,15 +43,15 @@ def crop_patch(img, centers, patch_size, num_patches):
 
       rmd = len_[0]%2 #Get the remainder, if there is any
       if all(v>=0 for v in [minx,miny,minz]) and all(v<=border for v, border in zip([maxx,maxy,maxz],imgdata.shape)):
-         patch = imgdata[minx:maxx+rmd, miny:maxy+rmd, minz:maxz+rmd]
+         patch = imgdata[minx:(maxx+rmd), miny:(maxy+rmd), minz:(maxz+rmd)]
  
       else:
          minx, miny, minz = np.clip([minx,miny,minz],0,img.get_shape())
          maxx, maxy, maxz = np.clip([maxx,maxy,maxz],0, img.get_shape())
          
          patch = imgdata[minx:maxx+rmd, miny:maxy+rmd, minz:maxz+rmd]
-
-      patches.append(patch)
+      if np.percentile(patch,25) != 0:#exclude patches in which more than 25% of the voxels were of zero-intensity
+         patches.append(patch)
  
     return np.array(patches)
 
@@ -76,11 +78,48 @@ def local_entropy(img, kernel_radius=2):
     """
     return generic_filter(img.astype(np.float), _entropy, size=2*kernel_radius)
 
-def patches_by_entropy(patches):
+def patches_by_entropy(img, num_patches, patches, patch_size):
     '''
     Finds high-entropy patches based on label, allows net to learn borders more effectively
     '''
-    return local_entropy(patches)
+    imgdata = img.get_data()
+    patches_highEn = []
+    i = 0
+    for patch in patches:
+       l_ent = local_entropy(patch)
+       print 'l_ent.shape ', l_ent.shape
+       top_ent = np.percentile(l_ent, 80)
+       print 'top_ent ', top_ent
+
+       if top_ent != 0:#otherwise, resample
+
+          highest = np.argwhere(l_ent >= top_ent)
+          print 'highest.shape ', highest.shape
+          p_r = random.sample(highest,3)
+          print 'p_r ', p_r
+          for c, len_ in zip(np.array(p_r), [20,20,20]):
+        
+               minx = c[0] - len_/2 #compute coordinates
+               maxx = c[0] + len_/2
+
+               miny = c[1] - len_/2
+               maxy = c[1] + len_/2
+
+               minz = c[2] - len_/2
+               maxz = c[2] + len_/2
+
+               if all(v>=0 for v in [minx,miny,minz]) and all(v<=border for v, border in zip([maxx,maxy,maxz],imgdata.shape)):
+                  patch = imgdata[minx:maxx, miny:maxy, minz:maxz]
+
+ #                 print 'patch_highEn ', np.array(patch)
+ 
+               else:
+                  minx, miny, minz = np.clip([minx,miny,minz],0,img.get_shape())
+                  maxx, maxy, maxz = np.clip([maxx,maxy,maxz],0, img.get_shape())
+                  patch = imgdata[minx:maxx, miny:maxy, minz:maxz]
+ #                 print 'patch_highEn ', np.array(patch)
+               patches_highEn.append(patch)
+    return np.array(patches_highEn)
     
 def dice_coefficients(label1, label2, labels=None):
     if labels is None:
@@ -97,12 +136,20 @@ def dice_coefficients(label1, label2, labels=None):
             dice_coefs.append(numerator / denominator)
     return dice_coefs
 
+
+
+   
 nib.Nifti1Header.quaternion_threshold = -6.401211e-06
-vol = nib.load('/Users/Elaine/desktop/MICCAI/Training/1001_3.nii')
-num_patches = 2000
+vol = nib.load('/Users/Elaine/desktop/MR_Img1.nii')
+label = nib.load('/Users/Elaine/desktop/MICCAI/Labels/1001_3_glm.nii')
+affine = vol.affine
+num_patches = 100
 patch_size = [27,27,27]
-centers = findCenters(vol,patch_size,num_patches)
+centers = findCenters(label,patch_size,num_patches)
+patches = crop_patch(vol,centers,patch_size)
+patches_highEn = patches_by_entropy(label,num_patches,patches, patch_size)
 
-patches = crop_patch(vol,centers,patch_size,num_patches)
-patches_highEntropy = [patches_by_entropy(patch) for patch in patches]
-
+nib.save(
+            nib.Nifti1Image(np.int32(patches_highEn[0]), affine),
+            os.path.join('/Users/Elaine/desktop',
+                'visualizePatch.nii.gz'))
