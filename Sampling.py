@@ -1,10 +1,10 @@
-
 import numpy as np
 import random
 import math
 import nibabel as nib
 from os import listdir
 from os.path import isfile,join
+import torch
 
 from scipy.ndimage import generic_filter
 from scipy.stats import entropy
@@ -43,7 +43,7 @@ def crop_patch(img, centers, patch_size):
       maxz = c[2] + r_z
 
       rmd = len_[0]%2 #Get the remainder, if there is any
-      if all(v>=0 for v in [minx,miny,minz]) and all(v<=border for v, border in zip([maxx,maxy,maxz],imgdata.shape)):
+      if all(v>=0 for v in [minx,miny,minz]) and all(v<border for v, border in zip([maxx,maxy,maxz],imgdata.shape)):
          patch = imgdata[minx:(maxx+rmd), miny:(maxy+rmd), minz:(maxz+rmd)]
  
       else:
@@ -51,8 +51,8 @@ def crop_patch(img, centers, patch_size):
          maxx, maxy, maxz = np.clip([maxx,maxy,maxz],0, img.get_shape())
          
          patch = imgdata[minx:maxx+rmd, miny:maxy+rmd, minz:maxz+rmd]
-     #if np.percentile(patch,25) != 0:#exclude patches in which more than 25% of the voxels were of zero-intensity
-      patches.append(patch)
+      if np.percentile(patch,10) != 0:#exclude patches in which more than 25% of the voxels were of zero-intensity
+         patches.append(patch)
  
     return np.array(patches)
 
@@ -133,23 +133,20 @@ def dice_coefficients(label1, label2, labels=None):
             dice_coefs.append(numerator / denominator)
     return dice_coefs
 
-def make_training_samples(img_path,label_path,num_patches,patch_size):
+def make_training_samples(imgname,labelname,num_patches,patch_size):
    imgPatches = []
    labelPatches = []
-   for imgname,labelname in zip(listdir(img_path),listdir(label_path)):
-      nib.Nifti1Header.quaternion_threshold = -6.401211e-06
-      vol = nib.load(join(img_path,imgname))
-      label = nib.load(join(label_path,labelname))
-      affine = vol.affine
+   nib.Nifti1Header.quaternion_threshold = -6.401211e-06
+   vol = nib.load(imgname)
+   label = nib.load(labelname)
+   affine = vol.affine
 
-      centers = findCenters(vol,patch_size,num_patches)
-      img_patches = crop_patch(vol,centers,patch_size)
-      imgPatches.append(img_patches)
-      label_patches = crop_patch(label,centers,patch_size)
-      labelPatches.append(label_patches)
+   centers = findCenters(vol,patch_size,num_patches)
+   img_patches = crop_patch(vol,centers,patch_size)
+   label_patches = crop_patch(label,centers,patch_size)
 
+      
    return np.array(img_patches), np.array(label_patches)
    
 
 
-                '''
