@@ -21,18 +21,18 @@ class YLNet3D(nn.Module):
         self.encoder_1 = nn.Sequential(
             nn.Conv3d(1,25,7,padding=6,dilation=2),
             nn.BatchNorm3d(25),
-            nn.PReLU()
+            nn.ReLU()
             ) #first encoder
  
         self.encoder_2 = nn.Sequential(
             nn.Conv3d(25,25,7,padding=6,dilation=2),
             nn.BatchNorm3d(25),
-            nn.PReLU()
+            nn.ReLU()
             ) #second encoder
         self.encoder_3 = nn.Sequential(
             nn.Conv3d(25,25,7,padding=6,dilation=2),
             nn.BatchNorm3d(25),
-            nn.PReLU()
+            nn.ReLU()
             ) #third encoder
 
         
@@ -48,25 +48,25 @@ class YLNet3D(nn.Module):
         self.decoder_1 = nn.Sequential(
             nn.Conv3d(25,25,7,padding=3),#the number of kernels can be easily changed here
             nn.BatchNorm3d(25),
-            nn.PReLU()
+            nn.ReLU()
             ) # first decoder
 
         self.decoder_2 = nn.Sequential(
             nn.Conv3d(50,25,7,padding=3),
             nn.BatchNorm3d(25),
-            nn.PReLU()
+            nn.ReLU()
             ) # second decoder
 
         self.decoder_3 = nn.Sequential(
             nn.Conv3d(50,25,7,padding=3),
             nn.BatchNorm3d(25),
-            nn.PReLU()
+            nn.ReLU()
             ) # third decoder
 
         self.conv_4 = nn.Sequential(
             nn.Conv3d(50,num_classes,7,padding=3), #the number of output columns depend on
             nn.BatchNorm3d(num_classes),            #the situations
-            nn.PReLU()
+            nn.ReLU()
             ) # last conv layer
 
 
