@@ -10,7 +10,7 @@ from torch.optim.lr_scheduler import MultiStepLR
 import torch.utils.data as data_utils
 
 from YLNet3D import *
-from Sampling import make_training_samples
+from sampling import make_training_samples
 import os
 import time
 import numpy as np
@@ -27,12 +27,12 @@ net.train()
 #------------------ Datasets ------------------------------
 img_path = '/Users/Elaine/desktop/MICCAI/Training'
 label_path = '/Users/Elaine/desktop/MICCAI/Labels'
-num_patches = 3000
+num_patches = 1000
 patch_size = [27,27,27]
 
 
 #----------- Hyperparameters for training -------------------
-optimizer = optim.SGD(net.parameters(),lr=0.001, momentum=0.9)
+optimizer = optim.SGD(net.parameters(),lr=0.0001, momentum=0.9)
 scheduler = MultiStepLR(optimizer,milestones=[10,20],gamma=0.1)#Set the learning rate of each parameter group to the initial lr decayed by gamma once
                                                              #the number of epoch reaches one of the milestones.
 criterion = nn.MSELoss()
@@ -52,7 +52,7 @@ best_acc = 0.0
     
 imgs, labels = listdir(img_path),listdir(label_path)
 for epoch in range(num_epochs): #In every epoch, go through all subjects
-    for imgname,labelname in zip(imgs[1:],labels): #For every subject
+    for imgname,labelname in zip(imgs,labels): #For every subject
         img_patches,label_patches = make_training_samples(os.path.join(img_path,imgname),os.path.join(label_path,labelname),num_patches,patch_size)
 
 
@@ -76,7 +76,7 @@ for epoch in range(num_epochs): #In every epoch, go through all subjects
                        label = Variable(label.cuda())
                     else:
                        imgdata,label = Variable(imgdata),Variable(label) 
-
+                    if imgdata.size() == label.size():
                         #zero the parameter gradients
                        optimizer.zero_grad()
 
@@ -117,4 +117,3 @@ for epoch in range(num_epochs): #In every epoch, go through all subjects
     
 
     
-
