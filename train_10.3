@@ -52,9 +52,9 @@ def makeDatasets(img_path,label_path,w_train,w_val):
     
     imgs, labels = listdir(img_path),listdir(label_path)
     trainset = imgs[:int(len(imgs)*w_train)]
-    labels_tr = imgs[:int(len(labels)*w_train)]
+    labels_tr = labels[:int(len(labels)*w_train)]
     valset = imgs[int(len(imgs)*w_val):]
-    labels_val = imgs[int(len(labels)*w_val):]
+    labels_val = labels[int(len(labels)*w_val):]
 
     return np.array(trainset), np.array(labels_tr), np.array(valset), np.array(labels_val)
 
@@ -100,7 +100,7 @@ best_model_wts = net.state_dict()
 best_acc = 0.0
     
 #imgs, labels = listdir(img_path),listdir(label_path)
-trainset,labels_tr,valset,labels_val = makeDataset(img_path,label_path,w_train,w_val)
+trainset,labels_tr,valset,labels_val = makeDatasets(img_path,label_path,w_train,w_val)
 
 for epoch in range(num_epochs): #In every epoch, go through all subjects
 
@@ -171,14 +171,6 @@ for epoch in range(num_epochs): #In every epoch, go through all subjects
 
         
          
-
-
-           
-           
-
-                    
-        
-       
 
        
       
