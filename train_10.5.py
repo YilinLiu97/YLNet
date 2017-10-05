@@ -21,8 +21,10 @@ net = YLNet3D(in_channels,out_channels)
 net.train()
 
 #------------------ Datasets ------------------------------
-img_path = '/Users/Elaine/desktop/MICCAI_old/Training'
-label_path = '/Users/Elaine/desktop/MICCAI_old/LabelsCorrected'
+# img_path = '/Users/Elaine/desktop/MICCAI_old/Training'
+img_path = '/home/yilin/MICCAI/Training'
+# label_path = '/Users/Elaine/desktop/MICCAI_old/LabelsCorrected'
+label_path = '/home/yilin/MICCAI/LabelsCorrected'
 
 num_patches = 100
 w_train = 0.7
