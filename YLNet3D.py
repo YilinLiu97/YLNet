@@ -13,24 +13,24 @@ class MySoftmax(nn.Module):
         return output_
     
 class YLNet3D(nn.Module):
-    def __init__(self,num_classes):
+    def __init__(self,in_channels,out_channels):
         super(YLNet3D, self).__init__()
         
         #Conv3d(in_channels, out_channels, kernel_size, stride=1, padding=0, dilation=1, groups=1, bias=True)
         #nn.Sequential is a container for Module.Module will work in order during forward
         self.encoder_1 = nn.Sequential(
-            nn.Conv3d(1,25,7,padding=6,dilation=2),
+            nn.Conv3d(in_channels,25,3,padding=2,dilation=2),
             nn.BatchNorm3d(25),
             nn.ReLU()
             ) #first encoder
  
         self.encoder_2 = nn.Sequential(
-            nn.Conv3d(25,25,7,padding=6,dilation=2),
+            nn.Conv3d(25,25,3,padding=2,dilation=2),
             nn.BatchNorm3d(25),
             nn.ReLU()
             ) #second encoder
         self.encoder_3 = nn.Sequential(
-            nn.Conv3d(25,25,7,padding=6,dilation=2),
+            nn.Conv3d(25,25,3,padding=2,dilation=2),
             nn.BatchNorm3d(25),
             nn.ReLU()
             ) #third encoder
@@ -46,33 +46,31 @@ class YLNet3D(nn.Module):
 
         
         self.decoder_1 = nn.Sequential(
-            nn.Conv3d(25,25,7,padding=3),#the number of kernels can be easily changed here
+            nn.Conv3d(25,25,3,padding=1),#the number of kernels can be easily changed here
             nn.BatchNorm3d(25),
             nn.ReLU()
             ) # first decoder
 
         self.decoder_2 = nn.Sequential(
-            nn.Conv3d(50,25,7,padding=3),
+            nn.Conv3d(50,25,3,padding=1),
             nn.BatchNorm3d(25),
             nn.ReLU()
             ) # second decoder
 
         self.decoder_3 = nn.Sequential(
-            nn.Conv3d(50,25,7,padding=3),
+            nn.Conv3d(50,25,3,padding=1),
             nn.BatchNorm3d(25),
             nn.ReLU()
             ) # third decoder
 
         self.conv_4 = nn.Sequential(
-            nn.Conv3d(50,num_classes,7,padding=3), #the number of output columns depend on
-            nn.BatchNorm3d(num_classes),            #the situations
-            nn.ReLU()
+            nn.Conv3d(50,out_channels,1,padding=0), #the number of output columns depend on the number of classes
             ) # last conv layer
 
 
     def forward(self,x): #x is an input that needs to go forward
         size_1 = x.size()
-        print 'input_size ',size_1
+#        print 'input_size ',size_1
         en_1 = self.encoder_1(x)
 
         
@@ -88,20 +86,18 @@ class YLNet3D(nn.Module):
         size_3 = en2_maxpool.size()
         en_3 = self.encoder_3(en2_maxpool)
 
- #       print 'en_3.size ', en_3.size
-#        print 'en_3 ', en_3
+#        print 'en_3.size ', en_3.size
         en3_maxpool,indices_3 = self.maxpool_3(en_3)
 #        print 'en3_maxpool ', en3_maxpool.size()
 #        print 'indices_3.size ', indices_3.size()
 
- #       print 'en3_maxpool ', en3_maxpool
         de_1 = self.decoder_1(en3_maxpool)
 
         de1_unpool = self.unpool_1(de_1, indices_3, output_size=size_3) #transfer of indices
         merge1_3 = torch.cat((de1_unpool,en_3), 1)
 
         de_2 = self.decoder_2(merge1_3)
-#        print 'de_2 ', de_2.size()
+#        print 'de_2.size() ', de_2.size()
 #        print 'en2_maxpool ', en2_maxpool.size()
         de2_unpool = self.unpool_2(de_2, indices_2, output_size=size_2) #transfer of indices
         merge2_2 = torch.cat((de2_unpool,en_2), 1)
@@ -109,7 +105,7 @@ class YLNet3D(nn.Module):
         de_3 = self.decoder_3(merge2_2)
         de3_unpool = self.unpool_3(de_3, indices_1, output_size=size_1) #transfer of indices
         merge3_1 = torch.cat((de3_unpool,en_1), 1)
- #       print 'de3_unpool.size ', de3_unpool.size()
+#        print 'de3_unpool.size ', de3_unpool.size()
 #        print 'merge3_1.size ', merge3_1.size()
 
         conv_4 = self.conv_4(merge3_1)
@@ -121,13 +117,13 @@ class YLNet3D(nn.Module):
         return output
 '''
 if __name__ == "__main__":     
-    input = Variable(torch.zeros(5,1,27,27,27))
-    net = YLNet3D(1)
+    input = Variable(torch.zeros(1,1,27,27,27))
+    net = YLNet3D(1,1)
     output = net(input)
-    print output
+   # print output
 
 #params = list(net.parameters())
 #print(len(params))
 #print(params[0].size())
-'''
 
+'''
