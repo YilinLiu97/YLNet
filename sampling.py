@@ -8,15 +8,25 @@ import torch
 
 from scipy.ndimage import generic_filter
 from scipy.stats import entropy
+   
 
-def findCenters(img, patch_size, num_patches):
-
+def findCenters(img, patch_size,num_patches):
+   '''
+   centers = [[],[],[]]
+   for len_in, len_out, center, n_tile in zip(img.get_shape(), patch_size,centers,n_tiles):
+      stride = int((len_in - len_out)/(n_tile-1))
+      center.append(len_out/2)
+      for i in range(n_tile - 2):
+         center.append(center[-1] + stride)
+      center.append(len_in - len_out/2)
+   '''
    centralVoxelsIndexes_x = np.random.choice(img.shape[0]-(patch_size[0]/2), num_patches, replace=True)
    centralVoxelsIndexes_y = np.random.choice(img.shape[1]-(patch_size[1]/2), num_patches, replace=True)
    centralVoxelsIndexes_z = np.random.choice(img.shape[2]-(patch_size[2]/2), num_patches, replace=True)
    
    centers = np.transpose([centralVoxelsIndexes_x,centralVoxelsIndexes_y,centralVoxelsIndexes_z])
-   return centers
+
+   return np.array(centers)
         
 
 def crop_patch(img, centers, patch_size):
@@ -43,16 +53,17 @@ def crop_patch(img, centers, patch_size):
       maxz = c[2] + r_z
 
       rmd = len_[0]%2 #Get the remainder, if there is any
-      if all(v>=0 for v in [minx,miny,minz]) and all(v<border for v, border in zip([maxx,maxy,maxz],imgdata.shape)):
+      if all(v>=0 for v in [minx,miny,minz]) and all(v<=border for v, border in zip([maxx,maxy,maxz],imgdata.shape)):
          patch = imgdata[minx:(maxx+rmd), miny:(maxy+rmd), minz:(maxz+rmd)]
- 
+         patches.append(patch)
+      '''
       else:
+         
          minx, miny, minz = np.clip([minx,miny,minz],0,img.get_shape())
          maxx, maxy, maxz = np.clip([maxx,maxy,maxz],0, img.get_shape())
-         
          patch = imgdata[minx:maxx+rmd, miny:maxy+rmd, minz:maxz+rmd]
-      if np.percentile(patch,10) != 0:#exclude patches in which more than 25% of the voxels were of zero-intensity
-         patches.append(patch)
+         '''
+ #     if np.percentile(patch,10) != 0:#exclude patches in which more than 25% of the voxels were of zero-intensity
  
     return np.array(patches)
 
@@ -146,7 +157,9 @@ def make_training_samples(imgname,labelname,num_patches,patch_size):
    label_patches = crop_patch(label,centers,patch_size)
 
       
-   return np.array(img_patches), np.array(label_patches)
-   
-
-
+   return affine, np.array(img_patches), np.array(label_patches)
+'''
+nib.Nifti1Header.quaternion_threshold = -6.401211e-06
+vol = nib.load('/Users/Elaine/desktop/MICCAI/Training/1003_3.nii')
+centers = findCenters(vol,[27,27,27],[5,5,5])
+'''
