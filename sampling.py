@@ -158,8 +158,4 @@ def make_training_samples(imgname,labelname,num_patches,patch_size):
 
       
    return affine, np.array(img_patches), np.array(label_patches)
-'''
-nib.Nifti1Header.quaternion_threshold = -6.401211e-06
-vol = nib.load('/Users/Elaine/desktop/MICCAI/Training/1003_3.nii')
-centers = findCenters(vol,[27,27,27],[5,5,5])
-'''
+
