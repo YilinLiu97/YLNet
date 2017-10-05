@@ -12,12 +12,19 @@ import numpy as np
 import math
 import nibabel as nib
 
-
+#----------------------- GPU -------------------------------
+use_gpu = torch.cuda.is_available()
+if use_gpu:
+	torch.set_default_tensor_type('torch.cuda.FloatTensor')
+print "Number of GPUs: ", torch.cuda.device_count()
+print "Current device:", torch.cuda.current_device()
 
 #-------------------- Net --------------------------------
 in_channels = 1
 out_channels = 9
 net = YLNet3D(in_channels,out_channels)
+if use_gpu:
+	net = net.cuda()
 net.train()
 
 #------------------ Datasets ------------------------------
@@ -35,7 +42,7 @@ optimizer = optim.SGD(net.parameters(),lr=0.000001, momentum=0.9)
 scheduler = MultiStepLR(optimizer,milestones=[10,20],gamma=0.1)#Set the learning rate of each parameter group to the initial lr decayed by gamma once
                                                              #the number of epoch reaches one of the milestones.
 criterion = nn.MSELoss()
-use_gpu = torch.cuda.is_available()
+
 num_epochs = 5
 batch_size = 10
 
