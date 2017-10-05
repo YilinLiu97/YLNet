@@ -12,7 +12,12 @@ import numpy as np
 import math
 import nibabel as nib
 
-
+#----------------------- GPU -------------------------------
+use_gpu = torch.cuda.is_available()
+if use_gpu:
+        torch.set_default_tensor_type('torch.cuda.FloatTensor')
+print "Number of GPUs: ", torch.cuda.device_count()
+print "Current device:", torch.cuda.current_device()
 
 #-------------------- Net --------------------------------
 in_channels = 1
