@@ -14,18 +14,17 @@ from scipy.stats import entropy
 def normalization(img):
    img_normed = []
    imgdata = img.get_data()
-   min = np.min(imgdata)
-   max = np.max(imgdata)
+   mean = np.mean(imgdata)
+   std = np.std(imgdata)
    
-   img_normed = [(x - min)/(max - min) for x in imgdata]
+   img_normed = (imgdata-mean)/std
    return np.array(img_normed)
 
 #img = nib.load('/Users/Elaine/desktop/Dataset/Training/subject205_noskl_mid_s205abcd_superseg_contrasted_path.nii')
 #normed = normalization(img)  
 # ************************** For Training *********************************
-def findROICenters(label,num_classes,num_patches):
+def findROICenters(labelData,num_classes,num_patches):
    ROICenters = []
-   labelData = label.get_data()
    #n_perClass = int(num_patches/(num_classes-1))
    for p_ix in xrange(1,num_classes):
       centers = np.argwhere(p_ix==labelData)
@@ -43,11 +42,10 @@ def findCenters(img, patch_size,num_patches):
 
    return np.array(centers)
 
-def crop_patch(img, centers, patch_size):
+def crop_patch(imgdata, centers, patch_size):
     """
     crop 3D patches from an nii file
     """
-    imgdata = img.get_data()
     patches = []
     num_patches = centers.shape[0]
     patch_size = np.reshape(np.repeat(patch_size, num_patches),[num_patches,len(patch_size)]) #reshape in order to have the same size as 'centers'
@@ -101,11 +99,10 @@ def local_entropy(img, kernel_radius=2):
     """
     return generic_filter(img.astype(np.float), _entropy, size=2*kernel_radius)
 
-def patches_by_entropy(img, num_patches, patches, patch_size):
+def patches_by_entropy(imgdata, num_patches, patches, patch_size):
     '''
     Finds high-entropy patches based on label, allows net to learn borders more effectively
     '''
-    imgdata = img.get_data()
     patches_highEn = []
     i = 0
     for patch in patches:
@@ -152,7 +149,8 @@ def make_training_samples(imgname,labelname,num_patches,patch_size,num_classes):
    affine = vol.affine
 
    vol = normalization(vol)
-   
+#   vol = vol.get_data() 
+   label = np.array(label.get_data())
 #   num_patches_rand = int(num_patches/2)
 #   num_patches_roi = int(num_patches-num_patches_rand)
    num_p = int(num_patches/num_classes)
@@ -161,9 +159,24 @@ def make_training_samples(imgname,labelname,num_patches,patch_size,num_classes):
    roi_centers = findROICenters(label,num_classes,num_p)
    
    roi_img_patches,roi_label_patches = [],[]
-   for i in xrange(0,len(roi_centers)):
-      roi_img_patches.append(crop_patch(vol,roi_centers[i],patch_size))
-      roi_label_patches.append(crop_patch(label,roi_centers[i],patch_size))
+      
+   vol_patches_1 = crop_patch(vol,roi_centers[0],patch_size)
+   label_patches_1 = crop_patch(label,roi_centers[0],patch_size)
+   vol_patches_2 = crop_patch(vol,roi_centers[1],patch_size)
+   label_patches_2 = crop_patch(label,roi_centers[1],patch_size)
+ #  print('vol_patches_1.shape ',len(vol_patches_1))
+#   print('vol_patches_2.shape ',len(vol_patches_2))
+   diff = abs(len(vol_patches_1)-len(vol_patches_2))
+   if len(vol_patches_1)<len(vol_patches_2):
+      label_patches_2 = label_patches_2[0:len(label_patches_2)-diff]
+      vol_patches_2 = vol_patches_2[0:len(vol_patches_2)-diff]
+   else:
+      label_patches_1 = label_patches_1[0:len(label_patches_1)-diff]
+      vol_patches_1 = vol_patches_1[0:len(vol_patches_1)-diff]
+   roi_img_patches.append(vol_patches_1)
+   roi_img_patches.append(vol_patches_2)
+   roi_label_patches.append(label_patches_1)
+   roi_label_patches.append(label_patches_2)
       
    roi_img_patches = np.reshape(roi_img_patches,[-1,patch_size[0],patch_size[1],patch_size[2]])
    roi_label_patches = np.reshape(roi_label_patches,[-1,patch_size[0],patch_size[1],patch_size[2]])
@@ -261,8 +274,10 @@ def stitch_Patches(probMaps,samplesCoords_perBatch,predPatches_perBatch,batch_si
    for i in xrange(batch_size):
       samplesCoords_i = samplesCoords_perBatch[i]
       min_coords = [samplesCoords_i[0][0],samplesCoords_i[1][0],samplesCoords_i[2][0]]
-      max_coords = [(x+27) for x in min_coords]
-
+      max_coords = [(x+25) for x in min_coords]
+   
+#      print('predPatches_perBatch[i].shape ',np.array(predPatches_perBatch[i]).shape)
+#      print('min_coords[0]:max_coords[0] ',np.array(probMaps[min_coords[0]:max_coords[0]]).shape)
       probMaps[min_coords[0]:max_coords[0],min_coords[1]:max_coords[1],min_coords[2]:max_coords[2]] = predPatches_perBatch[i]
       
    return np.array(probMaps)
@@ -274,15 +289,13 @@ def saveImage(probMaps,affine):
    if not os.path.exists(out_dir):
       os.mkdir(out_dir)
    pred_vol = nib.Nifti1Image(probMaps,affine)
-   empty_header = nib.Nifti1Header()
    nib.save(pred_vol, os.path.join(out_dir,'segRes.nii'))
 
 '''
-nib.Nifti1Header.quaternion_threshold = -6.401211e-06
-vol = nib.load('/Users/Elaine/desktop/MICCAI_old/Training/1006_3.nii')
-affine = vol.affine
-coordinates,patches = crop_det_patches(vol,[27,27,27])
-probMaps = np.array(np.zeros(list(vol.get_shape())), dtype="float32")
+label = nib.load('/home/yilin/Dataset/Labels/subject205_RIGHT_all_labels_8bit_path_RightLeftAmygdalaNOSUBFIELDS.nii')
+affine = label.affine
+coordinates,patches = crop_det_patches(label,[25,25,25])
+probMaps = np.array(np.zeros(list(label.get_shape())), dtype="int16")
 next = 0
 batch_indices= 0
 for i in xrange(0,len(patches),50):
@@ -291,14 +304,14 @@ for i in xrange(0,len(patches),50):
       probMaps = stitch_Patches(probMaps,coordinates[next:batch_indices],patches[next:batch_indices],50)
    next = batch_indices
 saveImage(probMaps,affine) 
-
 '''
+
   
 def make_testing_samples(imgname,labelname,patch_size):
    imgPatches = []
    labelPatches = []
    
-   nib.Nifti1Header.quaternion_threshold = -6.401211e-06
+   #nib.Nifti1Header.quaternion_threshold = -6.401211e-06
    vol = nib.load(imgname)
    label = nib.load(labelname)
    affine = vol.affine
