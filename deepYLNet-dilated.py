@@ -185,13 +185,4 @@ class YLNet4(nn.Module):
         logsoftmax = MyLogSoftmax()
         return logsoftmax(conv_9)
 
-'''
-if __name__ == "__main__":
-    
-
-    input = Variable(torch.randn(10,1,27,27,27).float())
-    label = Variable(torch.LongTensor(10,27,27,27).random_(9))
-    net = YLNet4(1,3)
-    output = net(input)
-'''
 
